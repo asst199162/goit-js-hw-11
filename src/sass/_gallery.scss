@@ -1,0 +1,34 @@
+.gallery {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+
+  margin-bottom: 15px;
+}
+
+.photo-card {
+  width: 350px;
+  margin: 10px;
+  box-shadow: 0 5px 15px 0 rgba(0, 0, 0, 0.2);
+}
+
+.photo-card__img {
+  display: block;
+  width: 100%;
+  height: 230px;
+  object-fit: cover;
+}
+
+.info {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 100%;
+  height: 60px;
+  font-size: 14px;
+}
+
+.info-item {
+  text-align: center;
+}
+

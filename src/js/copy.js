@@ -3,42 +3,32 @@ import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 
-import ImageApiService from './js/image.js';
+import ImageApiService from './imageApiService.js';
 import './sass/main.scss';
 
 const refs = {
   form: document.querySelector('#search-form'),
   gallery: document.querySelector('.gallery'),
   endSearchInfo: document.querySelector('.end-search__info'),
+  loading: document.querySelector('.loading'),
 };
-const { form, gallery, endSearchInfo } = refs;
+const { form, gallery, endSearchInfo, loading, overlay } = refs;
 
 const imageApiService = new ImageApiService();
 
-// Add submit listener
 form.addEventListener('submit', onSearch);
 
-// Add global variables
 let shownImages = 0;
 let lightbox = {};
-
-const infiniteObserver = new IntersectionObserver(
-  ([entry], observer) => {
-    if (entry.isIntersecting) {
-      observer.unobserve(entry.target);
-
-      loadMore();
-    }
-  },
-  { root: null, rootMargin: '50px', threshold: 0.5 },
-);
 
 async function onSearch(event) {
   event.preventDefault();
 
   resetGallery();
   imageApiService.resetPage();
-  hideEndMessage();
+  window.removeEventListener('scroll', scrollAndLoading);
+  hideEndSearchMessage();
+  hideLoading();
 
   imageApiService.query = form.elements.searchQuery.value.trim();
 
@@ -63,40 +53,55 @@ async function onSearch(event) {
     appendCardsMurkup(data.hits);
     addLightbox();
 
-    addObserveOrshowEndMessage(data.totalHits);
+    // Add scroll listener
+    window.addEventListener('scroll', scrollAndLoading);
+
+    if (shownImages === data.totalHits) {
+      hideLoading();
+    }
   } catch (error) {
     console.log(error);
   }
+}
+
+function scrollAndLoading() {
+  const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+
+  if (clientHeight + scrollTop >= scrollHeight) {
+
+    showLoading();
+
+
+    setTimeout(loadMore, 500);
+  }
+
+  if (endSearchInfo.classList.contains('show')) {
+    hideLoading();
+  }
+}
+
+function showLoading() {
+  loading.classList.add('show');
+}
+
+function hideLoading() {
+  loading.classList.remove('show');
 }
 
 async function loadMore() {
   try {
     const data = await imageApiService.fetchQuery();
     appendCardsMurkup(data.hits);
+    smoothRendering();
 
     lightbox.refresh();
 
     shownImages += data.hits.length;
-
-    addObserveOrshowEndMessage(data.totalHits);
+    if (shownImages >= data.totalHits) {
+      showEndSearchMessage();
+    }
   } catch (error) {
     console.log(error);
-  }
-}
-
-function addObserve() {
-  const lastCard = document.querySelector('.photo-card:last-child');
-
-  if (lastCard) {
-    infiniteObserver.observe(lastCard);
-  }
-}
-
-function addObserveOrshowEndMessage(totalHits) {
-  if (shownImages < totalHits) {
-    addObserve();
-  } else {
-    showEndMessage();
   }
 }
 
@@ -118,6 +123,7 @@ function generateCardsMurkup(cardsArray) {
 
 function appendCardsMurkup(cards) {
   gallery.insertAdjacentHTML('beforeend', generateCardsMurkup(cards));
+  hideLoading();
 }
 
 function resetGallery() {
@@ -132,10 +138,22 @@ function addLightbox() {
   });
 }
 
-function showEndMessage() {
+
+function smoothRendering() {
+  const { height: cardHeight } = document
+    .querySelector('.gallery')
+    .firstElementChild.getBoundingClientRect();
+
+  window.scrollBy({
+    top: cardHeight * 2,
+    behavior: 'smooth',
+  });
+}
+
+function showEndSearchMessage() {
   endSearchInfo.classList.add('show');
 }
 
-function hideEndMessage() {
+function hideEndSearchMessage() {
   endSearchInfo.classList.remove('show');
 }
